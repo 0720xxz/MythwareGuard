@@ -1,0 +1,18 @@
+# build output
+dist/
+*.zip
+*.res
+*.old
+*.exe
+
+# local scratch / previews
+tools/pdl.py
+resources/preview.png
+
+# NEVER commit: lab credentials and private notes
+test/
+CHECKPOINT.md
+*.log
+__pycache__/
+*.pyc
+/guard.ico
