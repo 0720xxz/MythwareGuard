@@ -44,8 +44,13 @@ void WriteDefaultConfig(const WCHAR *path)
     KvSet(d, L"report_server", L"");
     KvSet(d, L"report_interval", L"10");
     KvSet(d, L"report_group", L"");
-    KvSet(d, L"target:TopDomain.exe", L"required");
-    KvSet(d, L"target:MasterHelper.exe", L"required");
+    /* Default: "supervise what has been seen running", not "must always run".
+       MasterHelper is launched by TopDomain on demand - forcing it up at boot,
+       before the service brings the client up, yields a second instance that
+       dies with a runtime-error dialog. Observing first removes that race
+       while still restarting anything that is killed later. */
+    KvSet(d, L"target:TopDomain.exe", L"");
+    KvSet(d, L"target:MasterHelper.exe", L"");
     KvSet(d, L"target:StudentMain.exe", L"");
     KvSet(d, L"target:Student.exe", L"");
     KvSet(d, L"target:MythwareStudent.exe", L"");

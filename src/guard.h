@@ -23,6 +23,8 @@ typedef struct {
     DWORD     hardenedPid;
     DWORD     lastPid;
     ULONGLONG lastSpawn;
+    ULONGLONG spawnTick;
+    int       crashLoop;
     int       fails;
 } Target;
 

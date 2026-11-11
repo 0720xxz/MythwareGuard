@@ -132,6 +132,7 @@ static void RespawnTarget(Target *t)
     if (ok) {
         t->fails = 0;
         t->lastPid = pid;
+        t->spawnTick = NowTick();
         LogWrite(L"%s: respawned pid=%lu session=%lu", t->name,
                  (unsigned long)pid, (unsigned long)sess);
     } else {
@@ -167,6 +168,9 @@ static int TargetTick(HANDLE *watch, DWORD *pids, int maxWatch, BOOL supervise)
             }
             t->session = ProcSession(first);
             t->lastPid = first;
+            /* stable for 30 s => the restart worked, clear the crash loop */
+            if (t->spawnTick && NowTick() - t->spawnTick > 30000ULL) t->crashLoop = 0;
+            t->spawnTick = 0;
 
             if (!t->args[0]) {
                 WCHAR cl[1024], ce[PATHCH], ca[1024];
@@ -197,6 +201,12 @@ static int TargetTick(HANDLE *watch, DWORD *pids, int maxWatch, BOOL supervise)
         t->hardenedPid = 0;
         if (!t->required && !t->seen) continue;
 
+        /* Boot grace: right after startup the client is often still being
+           brought up by its own service. Racing it spawns a second instance
+           and the two fight, ending in a runtime-error dialog. Observe only
+           for the first two minutes of system uptime. */
+        if (!t->seen && NowTick() < 120000ULL) continue;
+
         /* the echo tier never restarts a target: it exists only to keep the
            warden alive. Letting both tiers act makes them race and start the
            client twice (two new pids, two events per kill). */
@@ -218,11 +228,27 @@ static int TargetTick(HANDLE *watch, DWORD *pids, int maxWatch, BOOL supervise)
         (void)supervise;
         {
             ULONGLONG cooldown = (t->fails > 0) ? 120000ULL : 500ULL;
+            if (t->crashLoop > 0) {
+                int shift = (t->crashLoop > 5) ? 5 : t->crashLoop;
+                cooldown = 5000ULL << shift;      /* 10s .. 160s */
+                if (cooldown > 300000ULL) cooldown = 300000ULL;
+            }
             if (now - t->lastSpawn < cooldown) continue;
         }
         {
             DWORD deadPid = t->lastPid;
+            ULONGLONG aliveFor = t->spawnTick ? (NowTick() - t->spawnTick) : 0;
+            BOOL quickDeath = (t->spawnTick != 0 && aliveFor < 5000ULL);
+
             t->lastPid = 0;
+            t->spawnTick = 0;
+            if (quickDeath) {
+                t->crashLoop++;
+                if (t->crashLoop <= 5 || (t->crashLoop % 10) == 0) {
+                    LogWrite(L"%s: died %lums after respawn (crash loop %d), backing off",
+                             t->name, (unsigned long)aliveFor, t->crashLoop);
+                }
+            }
             RespawnTarget(t);
             if (deadPid) {
                 /* forensic trail: which client process vanished, when it

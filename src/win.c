@@ -6,6 +6,7 @@
 #include <userenv.h>
 #include <aclapi.h>
 #include <sddl.h>
+#include <shellapi.h>
 
 /* ===================================================================== */
 /* process inspection                                                    */
@@ -275,20 +276,44 @@ static void BuildCmdLine(const WCHAR *exe, const WCHAR *args, WCHAR *out, DWORD 
 BOOL SpawnDetached(const WCHAR *exe, const WCHAR *args, const WCHAR *cwd,
                    DWORD *outPid)
 {
+    SHELLEXECUTEINFOW sei;
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     WCHAR cmd[2048];
-    BOOL ok;
+    DWORD pid = 0;
 
     if (!exe || !exe[0]) return FALSE;
+
+    /* Go through the shell exactly like a user double-click: full user
+       environment, correct working directory, no inherited console. Several
+       classroom clients refuse to initialise when started by a bare
+       CreateProcess and immediately die with a runtime error dialog. */
+    ZeroMemory(&sei, sizeof(sei));
+    sei.cbSize = sizeof(sei);
+    sei.fMask = SEE_MASK_NOCLOSEPROCESS | SEE_MASK_FLAG_NO_UI;
+    sei.lpVerb = L"open";
+    sei.lpFile = exe;
+    sei.lpParameters = (args && args[0]) ? args : NULL;
+    sei.lpDirectory = (cwd && cwd[0]) ? cwd : NULL;
+    sei.nShow = SW_SHOWNORMAL;
+
+    if (ShellExecuteExW(&sei) && sei.hProcess) {
+        pid = GetProcessId(sei.hProcess);
+        CloseHandle(sei.hProcess);
+        if (pid) {
+            if (outPid) *outPid = pid;
+            return TRUE;
+        }
+    }
+
     BuildCmdLine(exe, args, cmd, 2048);
     ZeroMemory(&si, sizeof(si));
     si.cb = sizeof(si);
     ZeroMemory(&pi, sizeof(pi));
-    ok = CreateProcessW(exe, cmd, NULL, NULL, FALSE,
+    if (!CreateProcessW(exe, cmd, NULL, NULL, FALSE,
                         DETACHED_PROCESS | CREATE_NEW_PROCESS_GROUP,
-                        NULL, (cwd && cwd[0]) ? cwd : NULL, &si, &pi);
-    if (!ok) return FALSE;
+                        NULL, (cwd && cwd[0]) ? cwd : NULL, &si, &pi))
+        return FALSE;
     if (outPid) *outPid = pi.dwProcessId;
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
