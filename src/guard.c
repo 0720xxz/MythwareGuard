@@ -35,7 +35,7 @@ void WriteDefaultConfig(const WCHAR *path)
     WCHAR v[64];
 
     if (!d) return;
-    KvSet(d, L"debug", L"0");
+    KvSet(d, L"debug", L"1");
     KvSet(d, L"poll_ms", L"200");
     KvSet(d, L"peer_timeout", L"12");
     KvSet(d, L"harden", L"0");
@@ -76,7 +76,7 @@ BOOL LoadConfig(void)
         d = KvLoad(g_cfgpath);
         if (!d) { WriteDefaultConfig(g_cfgpath); continue; }
 
-        g_debug = KvGetInt(d, L"debug", 0) != 0;
+        g_debug = KvGetInt(d, L"debug", 1) != 0;
         g_cfg.pollMs = KvGetInt(d, L"poll_ms", 200);
         if (g_cfg.pollMs < 100) g_cfg.pollMs = 100;
         if (g_cfg.pollMs > 5000) g_cfg.pollMs = 5000;

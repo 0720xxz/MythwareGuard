@@ -137,6 +137,7 @@ netsh advfirewall firewall add rule name="MwReceiverUDP" dir=in action=allow pro
 `C:\ProgramData\MythwareGuard\config.ini`，改完重启守护生效：
 
 ```ini
+debug=1                   ; 调试日志（默认开，排查完可设 0 降噪）
 poll_ms=200
 peer_timeout=12
 harden=0                  ; 1 = 给极域进程加 deny-TERMINATE ACL
