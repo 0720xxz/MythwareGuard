@@ -76,6 +76,8 @@ ULONGLONG NowTick(void);      /* monotonic ms        */
 ULONGLONG UnixMs(void);       /* wall clock ms       */
 
 /* ---------------- logging ---------------- */
+extern BOOL g_debug;
+void LogDebug(const WCHAR *fmt, ...);
 void LogOpen(void);
 void LogWrite(const WCHAR *fmt, ...);
 void LogClose(void);

@@ -602,6 +602,7 @@ static void Deliver(ULONGLONG *backoff)
                            body, resp, sizeof(resp));
     }
 
+    LogDebug(L"deliver %s -> http %d", name, code);
     if (code == 200) {
         QueueDrop(name);
         *backoff = BACKOFF_MIN;
@@ -655,6 +656,7 @@ void NotifyExit(const WCHAR *name, DWORD pid, BOOL respawned, DWORD newPid)
         LogWrite(L"outbox write failed, event lost");
         return;
     }
+    LogDebug(L"outbox +%d bytes (%s)", (int)strlen(body), name);
     if (g_sem) ReleaseSemaphore(g_sem, 1, NULL);
 }
 

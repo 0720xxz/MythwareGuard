@@ -408,6 +408,20 @@ static void LogRotate(void)
     LogReopen();
 }
 
+BOOL g_debug = FALSE;
+
+void LogDebug(const WCHAR *fmt, ...)
+{
+    WCHAR msg[1024];
+    va_list ap;
+
+    if (!g_debug) return;
+    va_start(ap, fmt);
+    if (vswprintf(msg, 1024, fmt, ap) < 0) msg[0] = 0;
+    va_end(ap);
+    LogWrite(L"DBG %s", msg);
+}
+
 void LogOpen(void)
 {
     WCHAR name[64];

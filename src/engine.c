@@ -109,6 +109,8 @@ static void RespawnTarget(Target *t)
     }
     DirNameOf(exe, cwd, PATHCH);
 
+    LogDebug(L"%s: respawn exe=%s args=[%s] cwd=%s session=%lu",
+             t->name, exe, t->args, cwd, (unsigned long)t->session);
     sess = t->session;
     if (sess == 0xFFFFFFFF) {
         sess = ConsoleSession();
@@ -160,7 +162,6 @@ static int TargetTick(HANDLE *watch, DWORD *pids, int maxWatch, BOOL supervise)
             DWORD first = sc.pids[i][0];
             WCHAR img[PATHCH];
 
-            t->seen = TRUE;
             t->fails = 0;
             if (ProcImage(first, img, PATHCH) && img[0] && !WStrEqI(img, t->path)) {
                 WStrCpy(t->path, PATHCH, img);
@@ -168,6 +169,11 @@ static int TargetTick(HANDLE *watch, DWORD *pids, int maxWatch, BOOL supervise)
             }
             t->session = ProcSession(first);
             t->lastPid = first;
+            if (!t->seen) {
+                LogDebug(L"%s: visible pid=%lu session=%lu path=%s",
+                         t->name, (unsigned long)first, (unsigned long)t->session, t->path);
+                t->seen = TRUE;
+            }
             /* stable for 30 s => the restart worked, clear the crash loop */
             if (t->spawnTick && NowTick() - t->spawnTick > 30000ULL) t->crashLoop = 0;
             t->spawnTick = 0;

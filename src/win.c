@@ -301,6 +301,7 @@ BOOL SpawnDetached(const WCHAR *exe, const WCHAR *args, const WCHAR *cwd,
         pid = GetProcessId(sei.hProcess);
         CloseHandle(sei.hProcess);
         if (pid) {
+            LogDebug(L"spawn[shell] pid=%lu %s", (unsigned long)pid, exe);
             if (outPid) *outPid = pid;
             return TRUE;
         }
@@ -315,6 +316,7 @@ BOOL SpawnDetached(const WCHAR *exe, const WCHAR *args, const WCHAR *cwd,
                         NULL, (cwd && cwd[0]) ? cwd : NULL, &si, &pi))
         return FALSE;
     if (outPid) *outPid = pi.dwProcessId;
+    LogDebug(L"spawn[create] pid=%lu %s", (unsigned long)pi.dwProcessId, exe);
     CloseHandle(pi.hThread);
     CloseHandle(pi.hProcess);
     return TRUE;
